@@ -1,0 +1,16 @@
+{
+  "semi": true,
+  "trailingComma": "all",
+  "singleQuote": true,
+  "printWidth": 120,
+  "tabWidth": 2,
+  "importOrder": [
+    "^constructs(.*)$",
+    "^aws-cdk(.*)$",
+    "^@aws-sdk(.*)$",
+    "^test/(.*)$",
+    "^[./]"
+  ],
+  "importOrderSeparation": true,
+  "overrides": []
+}
