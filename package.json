@@ -1,6 +1,6 @@
 {
   "name": "cdk-blender-render",
-  "description": "",
+  "description": "Render Blender with AWS",
   "repository": {
     "type": "git",
     "url": "https://github.com/mattiamatrix/cdk-blender-render.git"
@@ -29,8 +29,7 @@
     "projen": "npx projen"
   },
   "author": {
-    "name": "Mattia Sappa",
-    "email": "mattiasappa@gmail.com",
+    "name": "mattiamatrix",
     "organization": false
   },
   "devDependencies": {
@@ -39,12 +38,12 @@
     "@types/node": "^16",
     "@typescript-eslint/eslint-plugin": "^5",
     "@typescript-eslint/parser": "^5",
-    "aws-cdk-lib": "2.1.0",
+    "aws-cdk-lib": "2.30.0",
     "constructs": "10.0.5",
     "eslint": "^8",
     "eslint-config-prettier": "^8.8.0",
     "eslint-import-resolver-node": "^0.3.7",
-    "eslint-import-resolver-typescript": "^3.5.3",
+    "eslint-import-resolver-typescript": "^3.5.4",
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-promise": "^6.1.1",
@@ -55,22 +54,22 @@
     "jsii-pacmak": "^1.79.0",
     "npm-check-updates": "^16",
     "prettier": "^2.8.7",
-    "projen": "^0.69.9",
+    "projen": "^0.70.9",
     "standard-version": "^9",
     "ts-jest": "^27",
     "ts-node": "^10.9.1",
-    "tsc-alias": "^1.8.4",
-    "typescript": "^5.0.2"
+    "tsc-alias": "^1.8.5",
+    "typescript": "4.9.5"
   },
   "peerDependencies": {
-    "aws-cdk-lib": "^2.1.0",
+    "aws-cdk-lib": "^2.30.0",
     "constructs": "^10.0.5"
   },
   "keywords": [
-    "athena",
     "aws",
+    "blender",
     "cdk",
-    "kaggle"
+    "render"
   ],
   "main": "lib/index.js",
   "license": "Apache-2.0",
@@ -125,7 +124,7 @@
       "rootDir": "src"
     }
   },
-  "resolutions": {
+  "overrides": {
     "@types/prettier": "2.6.0",
     "@types/babel__traverse": "7.18.2"
   },
