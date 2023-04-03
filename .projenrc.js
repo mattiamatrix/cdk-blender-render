@@ -1,12 +1,13 @@
-const { awscdk, release } = require('projen');
+const { awscdk } = require('projen');
+const { NodePackageManager } = require('projen/lib/javascript');
+
 const project = new awscdk.AwsCdkConstructLibrary({
   name: 'cdk-blender-render',
-  description: '',
+  description: 'Render Blender with AWS',
   repositoryUrl: 'https://github.com/mattiamatrix/cdk-blender-render.git',
   licensed: true,
 
-  author: 'Mattia Sappa',
-  authorAddress: 'mattiasappa@gmail.com',
+  author: 'mattiamatrix',
 
   stability: 'experimental',
   defaultReleaseBranch: 'main',
@@ -14,12 +15,12 @@ const project = new awscdk.AwsCdkConstructLibrary({
 
   docgen: false,
 
-  // releaseToNpm: true,
-  // publishTasks: true,
+  // releaseToNpm: false,
+  // publishTasks: false,
   packageManager: NodePackageManager.NPM,
 
-  cdkVersion: '2.1.0',
-  // deps: [],                /* Runtime dependencies of this module. */
+  cdkVersion: '2.30.0',
+
   devDeps: [
     '@trivago/prettier-plugin-sort-imports',
     'eslint-config-prettier',
