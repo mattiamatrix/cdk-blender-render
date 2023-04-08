@@ -15,8 +15,8 @@ const project = new awscdk.AwsCdkConstructLibrary({
 
   docgen: false,
 
-  // releaseToNpm: false,
-  // publishTasks: false,
+  releaseToNpm: true,
+  publishTasks: true,
   packageManager: NodePackageManager.NPM,
 
   cdkVersion: '2.30.0',
