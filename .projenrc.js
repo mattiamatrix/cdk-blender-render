@@ -1,6 +1,9 @@
 const { awscdk } = require('projen');
 const { NodePackageManager } = require('projen/lib/javascript');
 
+const cdkVersion = '2.69.0';
+const alphaVersionSuffix = 'alpha.0';
+
 const project = new awscdk.AwsCdkConstructLibrary({
   name: 'cdk-blender-render',
   description: 'Render Blender with AWS',
@@ -19,7 +22,9 @@ const project = new awscdk.AwsCdkConstructLibrary({
   publishTasks: true,
   packageManager: NodePackageManager.NPM,
 
-  cdkVersion: '2.30.0',
+  cdkVersion: cdkVersion,
+
+  peerDeps: [`@aws-cdk/aws-batch-alpha@^${cdkVersion}-${alphaVersionSuffix}`],
 
   devDeps: [
     '@trivago/prettier-plugin-sort-imports',
