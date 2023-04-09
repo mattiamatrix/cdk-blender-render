@@ -1,10 +1,9 @@
-import { ComputeEnvironment, JobQueue, JobDefinition } from '@aws-cdk/aws-batch-alpha';
+import { ComputeEnvironment, ComputeResourceType, JobDefinition, JobQueue } from '@aws-cdk/aws-batch-alpha';
 
 import { Construct } from 'constructs';
 
-import { CfnLaunchTemplate, IVpc } from 'aws-cdk-lib/aws-ec2';
-import { Repository } from 'aws-cdk-lib/aws-ecr';
-import { ContainerImage, EcrImage } from 'aws-cdk-lib/aws-ecs';
+import { IVpc } from 'aws-cdk-lib/aws-ec2';
+import { ContainerImage } from 'aws-cdk-lib/aws-ecs';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 
 export interface BatchRunnerProps {
@@ -16,38 +15,23 @@ export class BatchRunner extends Construct {
   constructor(scope: Construct, id: string, props: BatchRunnerProps) {
     super(scope, id);
 
-    console.log('Create BatchRunner');
-
     // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#compute-environment
     const computeEnvironment = new ComputeEnvironment(this, ComputeEnvironment.name, {
       computeResources: {
         vpc: props.vpc,
-        // type: ComputeResourceType.SPOT,
-        // bidPercentage: 75, // Bids for resources at 75% of the on-demand price
+        type: ComputeResourceType.SPOT,
+        bidPercentage: 75, // Bids for resources at 75% of the on-demand price
+
+        minvCpus: 1,
+        desiredvCpus: 1,
+        maxvCpus: 2,
       },
       enabled: true,
       managed: true,
     });
 
-    //   // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#launch-template-support
-    //   const launchTemplate = new CfnLaunchTemplate(this, CfnLaunchTemplate.name, {
-    //     launchTemplateName: 'extra-storage-template',
-    //     launchTemplateData: {
-    //       blockDeviceMappings: [
-    //         {
-    //           deviceName: '/dev/xvdcz',
-    //           ebs: {
-    //             encrypted: true,
-    //             volumeSize: 100,
-    //             volumeType: 'gp2',
-    //           },
-    //         },
-    //       ],
-    //     },
-    //   });
-
     // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#job-queue
-    const jobQueue = new JobQueue(this, JobQueue.name, {
+    new JobQueue(this, JobQueue.name, {
       computeEnvironments: [
         {
           // Defines a collection of compute resources to handle assigned batch jobs
@@ -56,12 +40,14 @@ export class BatchRunner extends Construct {
           order: 1,
         },
       ],
+      enabled: true,
+      priority: 1,
     });
 
-    // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#job-definition
+    //docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#job-definition
     new JobDefinition(this, JobDefinition.name, {
       container: {
-        image: ContainerImage.fromAsset('../todo-list'),
+        image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`),
       },
     });
   }
