@@ -10,6 +10,7 @@ import { Construct } from 'constructs';
 
 import { Duration } from 'aws-cdk-lib';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
+import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
 import { ContainerImage } from 'aws-cdk-lib/aws-ecs';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 
@@ -25,7 +26,7 @@ export enum RenderType {
   GPU = 'gpu',
 }
 
-export interface BatchRunnerProps {
+export interface RenderProps {
   /**
    * Bucket used as input (.blender file) and output (frames and video)
    */
@@ -42,15 +43,19 @@ export interface BatchRunnerProps {
   readonly renderType?: RenderType;
 }
 
-export class BatchRunner extends Construct {
-  constructor(scope: Construct, id: string, props: BatchRunnerProps) {
+export class Render extends Construct {
+  constructor(scope: Construct, id: string, props: RenderProps) {
     super(scope, id);
 
     this.validateProps(props);
 
     const renderType = props.renderType ? props.renderType : RenderType.CPU;
 
+    const maxvCpus = 8;
+
     // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#compute-environment
+
+    // @ts-ignore
     const blenderSpotCompute = new ComputeEnvironment(this, 'BlenderSpotCompute', {
       computeResources: {
         vpc: props.vpc,
@@ -59,12 +64,13 @@ export class BatchRunner extends Construct {
 
         minvCpus: 0,
         desiredvCpus: 0,
-        maxvCpus: 16,
+        maxvCpus,
       },
       enabled: true,
       managed: true,
     });
 
+    // @ts-ignore
     const blenderOnDemandCompute = new ComputeEnvironment(this, 'BlenderOnDemandCompute', {
       computeResources: {
         vpc: props.vpc,
@@ -73,24 +79,32 @@ export class BatchRunner extends Construct {
 
         minvCpus: 0,
         desiredvCpus: 4,
-        maxvCpus: 8,
+        maxvCpus,
       },
       enabled: true,
       managed: true,
     });
 
+    const blenderFargateSpotCompute = new ComputeEnvironment(this, 'BlenderFargateSpotCompute', {
+      computeResources: {
+        vpc: props.vpc,
+        type: ComputeResourceType.FARGATE_SPOT,
+        maxvCpus,
+      },
+      enabled: true,
+      managed: true,
+    });
+
+    const computeEnvironments = [
+      //
+      blenderFargateSpotCompute,
+      // blenderSpotCompute,
+      // blenderOnDemandCompute,
+    ];
+
     // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#job-queue
     new JobQueue(this, JobQueue.name, {
-      computeEnvironments: [
-        {
-          computeEnvironment: blenderOnDemandCompute,
-          order: 1,
-        },
-        {
-          computeEnvironment: blenderSpotCompute,
-          order: 2,
-        },
-      ],
+      computeEnvironments: computeEnvironments.map((el, index) => ({ computeEnvironment: el, order: index + 1 })),
       enabled: true,
       priority: 10,
     });
@@ -100,6 +114,7 @@ export class BatchRunner extends Construct {
       container: {
         image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, {
           file: `${renderType}.Dockerfile`,
+          platform: Platform.LINUX_ARM64,
         }),
         vcpus: 1,
         // gpuCount: 1
@@ -114,7 +129,7 @@ export class BatchRunner extends Construct {
   /**
    * Validates the properties provided.
    */
-  private validateProps(props: BatchRunnerProps) {
+  private validateProps(props: RenderProps) {
     if (props === undefined) {
       return;
     }

@@ -75,6 +75,7 @@
   },
   "keywords": [
     "aws",
+    "batch",
     "blender",
     "cdk",
     "render"

@@ -1,1 +1,1 @@
-export * from './batch-runner';
+export * from './render';

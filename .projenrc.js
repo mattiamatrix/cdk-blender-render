@@ -14,7 +14,7 @@ const project = new awscdk.AwsCdkConstructLibrary({
 
   stability: 'experimental',
   defaultReleaseBranch: 'main',
-  keywords: ['aws', 'cdk', 'blender', 'render'],
+  keywords: ['aws', 'batch', 'blender', 'cdk', 'render'],
 
   docgen: false,
 
