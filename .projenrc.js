@@ -55,7 +55,17 @@ const project = new awscdk.AwsCdkConstructLibrary({
 // .eslintrc.json
 project.eslint.addRules({ 'import/order': 'off' });
 
-const common_exclude = ['cdk.out', 'cdk.context.json', 'yarn-error.log', 'coverage', 'venv', '.env'];
+const common_exclude = [
+  'cdk.out',
+  'cdk.context.json',
+  'yarn-error.log',
+  'coverage',
+  'venv',
+  '.env',
+  '*.png',
+  '!blender_example.blend',
+  '*.blend',
+];
 
 // .gitignore
 project.gitignore.exclude(...common_exclude);

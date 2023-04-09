@@ -56,3 +56,6 @@ yarn-error.log
 coverage
 venv
 .env
+*.png
+!blender_example.blend
+*.blend
