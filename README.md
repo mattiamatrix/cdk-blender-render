@@ -1,3 +1,8 @@
+
+# ! warning !
+`cdk-blender-render` is currently under active development. Contributions of any kind welcome!
+
+
 # cdk-blender-render
 Deploy `cdk-blender-render` in your AWS account and Render Blender with AWS Batch.
 
