@@ -7,8 +7,15 @@ import { ContainerImage } from 'aws-cdk-lib/aws-ecs';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 
 export enum RenderType {
-  GPU = 'gpu',
+  /**
+   *
+   */
   CPU = 'cpu',
+
+  /**
+   *
+   */
+  GPU = 'gpu',
 }
 
 export interface BatchRunnerProps {
@@ -23,7 +30,7 @@ export interface BatchRunnerProps {
   readonly vpc: IVpc;
 
   /**
-   * @default - RenderType.CPU
+   * @default CPU
    */
   readonly renderType?: RenderType;
 }
@@ -34,6 +41,8 @@ export class BatchRunner extends Construct {
 
     //
     const renderType = props.renderType ? props.renderType : RenderType.CPU;
+
+    console.log(renderType);
 
     // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#compute-environment
     const computeEnvironment = new ComputeEnvironment(this, ComputeEnvironment.name, {
@@ -67,7 +76,7 @@ export class BatchRunner extends Construct {
     // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#job-definition
     new JobDefinition(this, JobDefinition.name, {
       container: {
-        image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, { file: 'cpu.Dockerfile' }),
+        image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, { file: `${renderType}.Dockerfile` }),
         // gpuCount: 1
       },
     });
