@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/ubuntu:22.04
+FROM --platform=linux/amd64 public.ecr.aws/docker/library/ubuntu:22.04
 
 # Install dependencies
 RUN apt-get update && \

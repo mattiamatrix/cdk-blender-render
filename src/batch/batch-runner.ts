@@ -1,7 +1,14 @@
-import { ComputeEnvironment, ComputeResourceType, JobDefinition, JobQueue } from '@aws-cdk/aws-batch-alpha';
+import {
+  AllocationStrategy,
+  ComputeEnvironment,
+  ComputeResourceType,
+  JobDefinition,
+  JobQueue,
+} from '@aws-cdk/aws-batch-alpha';
 
 import { Construct } from 'constructs';
 
+import { Duration } from 'aws-cdk-lib';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { ContainerImage } from 'aws-cdk-lib/aws-ecs';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
@@ -30,7 +37,7 @@ export interface BatchRunnerProps {
   readonly vpc: IVpc;
 
   /**
-   * @default CPU
+   * @default RenderType.CPU
    */
   readonly renderType?: RenderType;
 }
@@ -39,21 +46,34 @@ export class BatchRunner extends Construct {
   constructor(scope: Construct, id: string, props: BatchRunnerProps) {
     super(scope, id);
 
-    //
+    this.validateProps(props);
+
     const renderType = props.renderType ? props.renderType : RenderType.CPU;
 
-    console.log(renderType);
-
     // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#compute-environment
-    const computeEnvironment = new ComputeEnvironment(this, ComputeEnvironment.name, {
+    const blenderSpotCompute = new ComputeEnvironment(this, 'BlenderSpotCompute', {
       computeResources: {
         vpc: props.vpc,
         type: ComputeResourceType.SPOT,
-        bidPercentage: 75, // Bids for resources at 75% of the on-demand price
+        allocationStrategy: AllocationStrategy.SPOT_CAPACITY_OPTIMIZED,
 
-        minvCpus: 1,
-        desiredvCpus: 1,
-        maxvCpus: 2,
+        minvCpus: 0,
+        desiredvCpus: 0,
+        maxvCpus: 16,
+      },
+      enabled: true,
+      managed: true,
+    });
+
+    const blenderOnDemandCompute = new ComputeEnvironment(this, 'BlenderOnDemandCompute', {
+      computeResources: {
+        vpc: props.vpc,
+        type: ComputeResourceType.ON_DEMAND,
+        allocationStrategy: AllocationStrategy.BEST_FIT_PROGRESSIVE,
+
+        minvCpus: 0,
+        desiredvCpus: 4,
+        maxvCpus: 8,
       },
       enabled: true,
       managed: true,
@@ -63,22 +83,40 @@ export class BatchRunner extends Construct {
     new JobQueue(this, JobQueue.name, {
       computeEnvironments: [
         {
-          // Defines a collection of compute resources to handle assigned batch jobs
-          computeEnvironment,
-          // Order determines the allocation order for jobs (i.e. Lower means higher preference for job assignment)
+          computeEnvironment: blenderOnDemandCompute,
           order: 1,
+        },
+        {
+          computeEnvironment: blenderSpotCompute,
+          order: 2,
         },
       ],
       enabled: true,
-      priority: 1,
+      priority: 10,
     });
 
     // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#job-definition
     new JobDefinition(this, JobDefinition.name, {
       container: {
-        image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, { file: `${renderType}.Dockerfile` }),
+        image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, {
+          file: `${renderType}.Dockerfile`,
+        }),
+        vcpus: 1,
         // gpuCount: 1
+        memoryLimitMiB: 4096,
+        // command: ['Ref::action', '-i', 'Ref::inputUri', '-o', 'Ref::outputUri', '-f', 'Ref::framesPerJob'],
       },
+      timeout: Duration.minutes(10),
+      propagateTags: true,
     });
+  }
+
+  /**
+   * Validates the properties provided.
+   */
+  private validateProps(props: BatchRunnerProps) {
+    if (props === undefined) {
+      return;
+    }
   }
 }

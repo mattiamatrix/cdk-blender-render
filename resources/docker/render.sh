@@ -1,5 +1,10 @@
 #!/bin/bash
 
+
+# https://ec2spotworkshops.com/rendering-with-batch/ecr-repository.html#optional-understanding-the-rendersh-script
+# Example
+# $ ./render.sh render -i s3://test-cdk-blender-render-bucket/input/examples/blender_example.blend -o s3://test-cdk-blender-render-bucket/output/ -f 1 -t 1
+
 parse_arguments() {
   # Parses the command line arguments and stores the values in global variables.
 
@@ -65,7 +70,9 @@ render() {
   blender -b file.blend -E CYCLES -o "frames/" -s "${start_frame}" -e "${end_frame}" -a
 
   # Upload all the rendered frames to a folder in S3
-  aws s3 cp --recursive "frames" "${OUTPUT_URI}/frames"
+  timestamp=$(date +%s)
+
+  aws s3 cp --recursive "frames" "${OUTPUT_URI}/${timestamp}/frames"
 }
 
 stitch() {
@@ -82,10 +89,10 @@ stitch() {
   aws s3 cp output.mp4 "${OUTPUT_URI}/output.mp4"
 }
 
-parse_arguments "$@"
-
 # test
 aws s3 ls 
+
+parse_arguments "$@"
 
 if [ "${ACTION}" == "render" ] ; then
   render
