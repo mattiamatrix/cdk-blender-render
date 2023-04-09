@@ -6,14 +6,34 @@ import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { ContainerImage } from 'aws-cdk-lib/aws-ecs';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 
+export enum RenderType {
+  GPU = 'gpu',
+  CPU = 'cpu',
+}
+
 export interface BatchRunnerProps {
+  /**
+   * Bucket used as input (.blender file) and output (frames and video)
+   */
   readonly bucket: Bucket;
+
+  /**
+   * The Vpc used to deploy the resources
+   */
   readonly vpc: IVpc;
+
+  /**
+   * @default - RenderType.CPU
+   */
+  readonly renderType?: RenderType;
 }
 
 export class BatchRunner extends Construct {
   constructor(scope: Construct, id: string, props: BatchRunnerProps) {
     super(scope, id);
+
+    //
+    const renderType = props.renderType ? props.renderType : RenderType.CPU;
 
     // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#compute-environment
     const computeEnvironment = new ComputeEnvironment(this, ComputeEnvironment.name, {
@@ -44,10 +64,11 @@ export class BatchRunner extends Construct {
       priority: 1,
     });
 
-    //docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#job-definition
+    // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#job-definition
     new JobDefinition(this, JobDefinition.name, {
       container: {
-        image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`),
+        image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, { file: 'cpu.Dockerfile' }),
+        // gpuCount: 1
       },
     });
   }
