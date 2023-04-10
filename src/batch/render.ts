@@ -56,8 +56,6 @@ export class Render extends Construct {
     const desiredvCpus = 2;
     const maxvCpus = 4;
 
-    const jobMemory = 1024;
-
     // Role for ECS job running on EC2 instance
     const spotComputeRole = new Role(this, 'SpotComputeRole', {
       assumedBy: new ServicePrincipal('ec2.amazonaws.com'),
@@ -126,6 +124,7 @@ export class Render extends Construct {
     });
 
     // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#job-definition
+    const jobMemory = 4096;
     new JobDefinition(this, JobDefinition.name, {
       container: {
         image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, {
