@@ -15,11 +15,22 @@ docker-test-cpu:
 	-e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
 	-e AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN} \
 	-e AWS_DEFAULT_REGION=eu-west-2 \
-	blender-cpu render -i "s3://${TEST_BUCKET}/input/examples/blender_example.blend" -o "s3://test-cdk-blender-render-bucket/output/" -f 1 -t 1
+	blender-cpu render -m CPU -i "s3://${TEST_BUCKET}/input/examples/blender_example.blend" -o "s3://test-cdk-blender-render-bucket/output" -f 1 -t 1
 
 docker-build-gpu:
 	cd resources/docker && \
-	docker build . -f gpu.Dockerfile -t blender-gpu:latest
+	docker build . \
+	-f gpu.Dockerfile \
+	-t blender-gpu:latest \
+	--platform=linux/amd64
+
+docker-test-gpu:
+	docker run \
+	-e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+	-e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+	-e AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN} \
+	-e AWS_DEFAULT_REGION=eu-west-2 \
+	blender-gpu:latest render -m CUDA -i "s3://${TEST_BUCKET}/input/examples/blender_example.blend" -o "s3://test-cdk-blender-render-bucket/output" -f 1 -t 1
 
 compile:
 	npx projen compile

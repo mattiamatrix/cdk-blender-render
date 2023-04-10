@@ -5,30 +5,19 @@ ENV BLENDER_VERSION_MAJOR 3.5.0
 ENV BLENDER_URL https://mirror.clarkson.edu/blender/release/Blender${BLENDER_VERSION}/blender-${BLENDER_VERSION_MAJOR}-linux-x64.tar.xz
 
 # Install dependencies
-RUN apt-get update && \
+RUN apt-get update -y && \
     apt-get install -y \
     sudo \
     curl \
     ca-certificates \
     zip \
-    gcc \ 
-    gnupg2 \
-    xz-utils \
-    libx11-dev \
-    libxi-dev \
-    libxxf86vm-dev \
-    libfontconfig1 \
-    libxrender1 \
-    libgl1-mesa-glx
+    xz-utils 
 
 # # Download and install AWS CLI
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
     sudo ./aws/install && \
     rm ./aws/install
-
-
-RUN echo "${BLENDER_URL}"
 
 # Download and install Blender
 RUN curl "${BLENDER_URL}" -o "blender.tar.xz" && \
@@ -41,6 +30,17 @@ RUN curl "${BLENDER_URL}" -o "blender.tar.xz" && \
 #     tar -xvf ffmpeg.tar.xz --strip-components=1 -C /bin && \
 #     rm -rf ffmpeg.tar.xz && \
 #     rm -rf ffmpeg
+
+RUN apt-get update -y && \
+    apt-get install -y \
+    libx11-dev \
+    libxi-dev \
+    libxxf86vm-dev \
+    libfontconfig1 \
+    libxrender1 \
+    libgl1-mesa-glx \
+    libxkbcommon-x11-0 \
+    libsm6
 
 # Copy the script to the root of the container and give it permission to be executed
 COPY ./render.sh /

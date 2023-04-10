@@ -17,6 +17,10 @@ parse_arguments() {
 
   while (( "$#" )); do
     case "$1" in
+      -m)
+        RENDER_MODE=$2
+        shift
+        ;;
       -i)
         INPUT_URI=$2
         shift
@@ -66,8 +70,8 @@ render() {
 
   # Start the rendering process
   mkdir frames
-  echo "Rendering frames ${start_frame} to ${end_frame}"
-  blender -b file.blend -E CYCLES -o "frames/" -s "${start_frame}" -e "${end_frame}" -a
+  echo "Rendering frames ${start_frame} to ${end_frame} on device ${RENDER_MODE}"
+  blender -b file.blend -E CYCLES -o "frames/" -s "${start_frame}" -e "${end_frame}" -a -- --cycles-device "${RENDER_MODE}" --cycles-print-stats
 
   # Upload all the rendered frames to a folder in S3
   timestamp=$(date +%s)
