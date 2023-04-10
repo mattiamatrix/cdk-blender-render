@@ -17,7 +17,6 @@ docker-test-cpu:
 	-e AWS_DEFAULT_REGION=eu-west-2 \
 	blender-cpu render -i "s3://${TEST_BUCKET}/input/examples/blender_example.blend" -o "s3://test-cdk-blender-render-bucket/output/" -f 1 -t 1
 
-
 docker-build-gpu:
 	cd resources/docker && \
 	docker build . -f gpu.Dockerfile -t blender-gpu:latest
