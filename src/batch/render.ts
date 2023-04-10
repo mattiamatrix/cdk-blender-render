@@ -14,6 +14,7 @@ import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
 import { ContainerImage } from 'aws-cdk-lib/aws-ecs';
 import { CfnInstanceProfile, ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
+import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
 
 export enum RenderType {
   /**
@@ -42,15 +43,23 @@ export interface RenderProps {
    * @default RenderType.CPU
    */
   readonly renderType?: RenderType;
+
+  /**
+   * @default true
+   */
+  readonly loadExample?: boolean;
 }
 
 export class Render extends Construct {
   constructor(scope: Construct, id: string, props: RenderProps) {
     super(scope, id);
 
+    // defaults
+    const { renderType = RenderType.CPU, loadExample = true } = props;
+
     this.validateProps(props);
 
-    const renderType = props.renderType ? props.renderType : RenderType.CPU;
+    this.loadExamples(loadExample, props.bucket);
 
     const minvCpus = 1;
     const desiredvCpus = 2;
@@ -161,6 +170,25 @@ export class Render extends Construct {
   private validateProps(props: RenderProps) {
     if (props === undefined) {
       return;
+    }
+  }
+
+  /**
+   * Load examples in S3 bucket
+   */
+  private loadExamples(loadExample: boolean, bucket: Bucket) {
+    if (loadExample) {
+      const exampleFileName = 'blender_example.blend';
+
+      console.log(`Loading ${exampleFileName} example in ${bucket.bucketName}`);
+
+      new BucketDeployment(this, 'ExampleBucketDeployment', {
+        sources: [Source.asset(`${__dirname}/../../resources/blender/${exampleFileName}`)],
+        destinationBucket: bucket,
+        destinationKeyPrefix: 'input/examples',
+      });
+    } else {
+      console.log(`Examples disabled`);
     }
   }
 }
