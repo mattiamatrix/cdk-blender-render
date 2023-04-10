@@ -12,6 +12,7 @@ import { Duration } from 'aws-cdk-lib';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
 import { ContainerImage } from 'aws-cdk-lib/aws-ecs';
+import { CfnInstanceProfile, ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 
 export enum RenderType {
@@ -51,55 +52,70 @@ export class Render extends Construct {
 
     const renderType = props.renderType ? props.renderType : RenderType.CPU;
 
-    const maxvCpus = 8;
+    const minvCpus = 1;
+    const desiredvCpus = 2;
+    const maxvCpus = 4;
+
+    const jobMemory = 1024;
+
+    // Role for ECS job running on EC2 instance
+    const spotComputeRole = new Role(this, 'SpotComputeRole', {
+      assumedBy: new ServicePrincipal('ec2.amazonaws.com'),
+      managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonEC2ContainerServiceforEC2Role')],
+    });
+
+    props.bucket.grantReadWrite(spotComputeRole);
+
+    const spotComputeRoleInstanceRole = new CfnInstanceProfile(this, 'SpotComputeRoleInstanceRole', {
+      roles: [spotComputeRole.roleName],
+    });
 
     // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#compute-environment
-
-    // @ts-ignore
-    const blenderSpotCompute = new ComputeEnvironment(this, 'BlenderSpotCompute', {
+    const spotCompute = new ComputeEnvironment(this, 'SpotCompute', {
       computeResources: {
         vpc: props.vpc,
         type: ComputeResourceType.SPOT,
         allocationStrategy: AllocationStrategy.SPOT_CAPACITY_OPTIMIZED,
 
-        minvCpus: 0,
-        desiredvCpus: 0,
+        instanceRole: spotComputeRoleInstanceRole.attrArn,
+
+        minvCpus,
+        desiredvCpus,
         maxvCpus,
       },
       enabled: true,
       managed: true,
     });
+
+    // const onDemandCompute = new ComputeEnvironment(this, 'OnDemandCompute', {
+    //   computeResources: {
+    //     vpc: props.vpc,
+    //     type: ComputeResourceType.ON_DEMAND,
+    //     allocationStrategy: AllocationStrategy.BEST_FIT_PROGRESSIVE,
+
+    //     minvCpus,
+    //     desiredvCpus,
+    //     maxvCpus,
+    //   },
+    //   enabled: true,
+    //   managed: true,
+    // });
+
+    // const fargateSpotCompute = new ComputeEnvironment(this, 'FargateSpotCompute', {
+    //   computeResources: {
+    //     vpc: props.vpc,
+    //     type: ComputeResourceType.FARGATE_SPOT,
+    //     maxvCpus,
+    //   },
+    //   enabled: true,
+    //   managed: true,
+    // });
 
     // @ts-ignore
-    const blenderOnDemandCompute = new ComputeEnvironment(this, 'BlenderOnDemandCompute', {
-      computeResources: {
-        vpc: props.vpc,
-        type: ComputeResourceType.ON_DEMAND,
-        allocationStrategy: AllocationStrategy.BEST_FIT_PROGRESSIVE,
-
-        minvCpus: 0,
-        desiredvCpus: 4,
-        maxvCpus,
-      },
-      enabled: true,
-      managed: true,
-    });
-
-    const blenderFargateSpotCompute = new ComputeEnvironment(this, 'BlenderFargateSpotCompute', {
-      computeResources: {
-        vpc: props.vpc,
-        type: ComputeResourceType.FARGATE_SPOT,
-        maxvCpus,
-      },
-      enabled: true,
-      managed: true,
-    });
-
     const computeEnvironments = [
-      //
-      blenderFargateSpotCompute,
-      // blenderSpotCompute,
-      // blenderOnDemandCompute,
+      spotCompute,
+      // onDemandCompute,
+      // fargateSpotCompute,
     ];
 
     // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#job-queue
@@ -114,12 +130,26 @@ export class Render extends Construct {
       container: {
         image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, {
           file: `${renderType}.Dockerfile`,
-          platform: Platform.LINUX_ARM64,
+          platform: Platform.LINUX_AMD64,
         }),
+        // jobRole: batchJobRole,
+        // executionRole: batchJobRole,
         vcpus: 1,
         // gpuCount: 1
-        memoryLimitMiB: 4096,
+        memoryLimitMiB: jobMemory,
         // command: ['Ref::action', '-i', 'Ref::inputUri', '-o', 'Ref::outputUri', '-f', 'Ref::framesPerJob'],
+
+        command: [
+          'render',
+          '-i',
+          's3://test-cdk-blender-render-bucket/input/examples/blender_example.blend',
+          '-o',
+          's3://test-cdk-blender-render-bucket/output/',
+          '-f',
+          '1',
+          '-t',
+          '1',
+        ],
       },
       timeout: Duration.minutes(10),
       propagateTags: true,
