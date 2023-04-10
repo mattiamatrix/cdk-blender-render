@@ -1,19 +1,13 @@
-FROM --platform=linux/amd64 public.ecr.aws/docker/library/ubuntu:22.04
+FROM public.ecr.aws/docker/library/ubuntu:22.04
 
 # Install dependencies
-RUN apt-get update && \
+RUN apt-get update -y && \
     apt-get install -y \
     sudo \
     curl \
     ca-certificates \
     zip \
-    xz-utils \
-    libx11-dev \
-    libxi-dev \
-    libxxf86vm-dev \
-    libfontconfig1 \
-    libxrender1 \
-    libgl1-mesa-glx
+    xz-utils 
 
 # Download and install AWS CLI
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
@@ -27,11 +21,22 @@ RUN curl "https://mirror.clarkson.edu/blender/release/Blender3.5/blender-3.5.0-l
     rm -rf blender.tar.xz && \
     rm -rf blender
 
-# Copy FFmpeg to the root of the container and unzip it
-RUN curl "https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz" -o "ffmpeg.tar.xz" && \
-    tar -xvf ffmpeg.tar.xz --strip-components=1 -C /bin && \
-    rm -rf ffmpeg.tar.xz && \
-    rm -rf ffmpeg
+# # Copy FFmpeg to the root of the container and unzip it
+# RUN curl "https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz" -o "ffmpeg.tar.xz" && \
+#     tar -xvf ffmpeg.tar.xz --strip-components=1 -C /bin && \
+#     rm -rf ffmpeg.tar.xz && \
+#     rm -rf ffmpeg
+
+RUN apt-get update -y && \
+    apt-get install -y \
+    libx11-dev \
+    libxi-dev \
+    libxxf86vm-dev \
+    libfontconfig1 \
+    libxrender1 \
+    libgl1-mesa-glx \
+    libxkbcommon-x11-0 \
+    libsm6
 
 # Copy the script to the root of the container and give it permission to be executed
 COPY ./render.sh /

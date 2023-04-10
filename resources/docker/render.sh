@@ -89,9 +89,6 @@ stitch() {
   aws s3 cp output.mp4 "${OUTPUT_URI}/output.mp4"
 }
 
-# test
-aws s3 ls 
-
 parse_arguments "$@"
 
 if [ "${ACTION}" == "render" ] ; then

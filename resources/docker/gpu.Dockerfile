@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 nvidia/cuda:12.0.0-base-ubuntu22.04
+FROM nvidia/cuda:12.0.0-base-ubuntu22.04
 
 ENV BLENDER_VERSION 3.5
 ENV BLENDER_VERSION_MAJOR 3.5.0
