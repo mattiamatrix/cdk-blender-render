@@ -149,6 +149,8 @@ export class Render extends Construct {
 
         command: [
           'render',
+          '-m',
+          'CPU',
           '-i',
           's3://test-cdk-blender-render-bucket/input/examples/blender_example.blend',
           '-o',
