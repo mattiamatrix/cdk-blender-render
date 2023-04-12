@@ -32,6 +32,10 @@ docker-test-gpu:
 	-e AWS_DEFAULT_REGION=eu-west-2 \
 	blender-gpu:latest render -m CUDA -i "s3://${TEST_BUCKET}/input/examples/blender_example.blend" -o "s3://test-cdk-blender-render-bucket/output" -f 1 -t 1
 
+blender-local-test:
+	cd resources/blender && \
+	blender -b blender_example.blend -o "frames"/ -f 1 -- --cycles-device "${RENDER_MODE}"
+
 compile:
 	npx projen compile
 
