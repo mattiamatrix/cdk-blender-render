@@ -1,6 +1,9 @@
 const { awscdk } = require('projen');
 const { NodePackageManager } = require('projen/lib/javascript');
 
+const cdkVersion = '2.69.0';
+const alphaVersionSuffix = 'alpha.0';
+
 const project = new awscdk.AwsCdkConstructLibrary({
   name: 'cdk-blender-render',
   description: 'Render Blender with AWS',
@@ -11,15 +14,17 @@ const project = new awscdk.AwsCdkConstructLibrary({
 
   stability: 'experimental',
   defaultReleaseBranch: 'main',
-  keywords: ['aws', 'cdk', 'blender', 'render'],
+  keywords: ['aws', 'batch', 'blender', 'cdk', 'render'],
 
   docgen: false,
 
-  // releaseToNpm: false,
-  // publishTasks: false,
+  releaseToNpm: true,
+  publishTasks: true,
   packageManager: NodePackageManager.NPM,
 
-  cdkVersion: '2.30.0',
+  cdkVersion: cdkVersion,
+
+  peerDeps: [`@aws-cdk/aws-batch-alpha@^${cdkVersion}-${alphaVersionSuffix}`],
 
   devDeps: [
     '@trivago/prettier-plugin-sort-imports',
@@ -50,7 +55,7 @@ const project = new awscdk.AwsCdkConstructLibrary({
 // .eslintrc.json
 project.eslint.addRules({ 'import/order': 'off' });
 
-const common_exclude = ['cdk.out', 'cdk.context.json', 'yarn-error.log', 'coverage', 'venv'];
+const common_exclude = ['cdk.out', 'cdk.context.json', 'yarn-error.log', 'coverage', 'venv', '.env', '*.png'];
 
 // .gitignore
 project.gitignore.exclude(...common_exclude);

@@ -4,6 +4,8 @@ cdk.context.json
 yarn-error.log
 coverage
 venv
+.env
+*.png
 node_modules
 dist
 out

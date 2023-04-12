@@ -27,3 +27,5 @@ cdk.context.json
 yarn-error.log
 coverage
 venv
+.env
+*.png
