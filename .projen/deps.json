@@ -2,7 +2,7 @@
   "dependencies": [
     {
       "name": "@aws-cdk/aws-batch-alpha",
-      "version": "2.69.0-alpha.0",
+      "version": "2.74.0-alpha.0",
       "type": "build"
     },
     {
@@ -31,7 +31,7 @@
     },
     {
       "name": "aws-cdk-lib",
-      "version": "2.69.0",
+      "version": "2.74.0",
       "type": "build"
     },
     {
@@ -138,12 +138,12 @@
     },
     {
       "name": "@aws-cdk/aws-batch-alpha",
-      "version": "^2.69.0-alpha.0",
+      "version": "^2.74.0-alpha.0",
       "type": "peer"
     },
     {
       "name": "aws-cdk-lib",
-      "version": "^2.69.0",
+      "version": "^2.74.0",
       "type": "peer"
     },
     {

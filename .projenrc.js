@@ -1,7 +1,7 @@
 const { awscdk } = require('projen');
 const { NodePackageManager } = require('projen/lib/javascript');
 
-const cdkVersion = '2.69.0';
+const cdkVersion = '2.74.0';
 const alphaVersionSuffix = 'alpha.0';
 
 const project = new awscdk.AwsCdkConstructLibrary({

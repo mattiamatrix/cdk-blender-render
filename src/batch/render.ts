@@ -1,17 +1,11 @@
-import {
-  ComputeEnvironment,
-  ComputeResourceType,
-  JobDefinition,
-  JobQueue,
-  PlatformCapabilities,
-} from '@aws-cdk/aws-batch-alpha';
+import { EcsFargateContainerDefinition, FargateComputeEnvironment, JobQueue } from '@aws-cdk/aws-batch-alpha';
 
 import { Construct } from 'constructs';
 
-import { Duration } from 'aws-cdk-lib';
+import { Size } from 'aws-cdk-lib';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
-import { ContainerImage } from 'aws-cdk-lib/aws-ecs';
+import { ContainerImage, FargatePlatformVersion } from 'aws-cdk-lib/aws-ecs';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
@@ -111,14 +105,11 @@ export class Render extends Construct {
     //   managed: true,
     // });
 
-    const fargateSpotCompute = new ComputeEnvironment(this, 'FargateSpotCompute', {
-      computeResources: {
-        vpc: props.vpc,
-        type: ComputeResourceType.FARGATE_SPOT,
-        maxvCpus,
-      },
+    const fargateSpotCompute = new FargateComputeEnvironment(this, 'SpotFargateCompute', {
+      vpc: props.vpc,
+      spot: true,
+      maxvCpus,
       enabled: true,
-      managed: true,
     });
 
     const computeEnvironments = [
@@ -186,35 +177,33 @@ export class Render extends Construct {
 
     const jobMemory = 4096;
 
-    new JobDefinition(this, 'FargateCPUJobDefinition', {
-      container: {
-        image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, {
-          file: 'cpu.Dockerfile',
-          platform: Platform.LINUX_AMD64,
-        }),
-        executionRole,
-        jobRole: taskRole,
-        vcpus: 2,
-        memoryLimitMiB: jobMemory,
+    new EcsFargateContainerDefinition(this, 'FargateCPUJobDefinition', {
+      cpu: 2,
+      image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, {
+        file: 'cpu.Dockerfile',
+        platform: Platform.LINUX_AMD64,
+      }),
+      memory: Size.mebibytes(jobMemory),
 
-        command: [
-          'render',
-          '-m',
-          'CPU',
-          '-i',
-          `s3://${bucket.bucketName}/input/examples/blender_example.blend`,
-          '-o',
-          `s3://${bucket.bucketName}/output/`,
-          '-f',
-          '1',
-          '-t',
-          '1',
-        ],
-        assignPublicIp: true, // Required in a default VPC to download Docker image from Amazon ECR
-      },
-      platformCapabilities: [PlatformCapabilities.FARGATE],
-      timeout: Duration.minutes(10),
-      propagateTags: true,
+      assignPublicIp: true, // Required in a default VPC to download Docker image from Amazon ECR
+      executionRole,
+      jobRole: taskRole,
+
+      fargatePlatformVersion: FargatePlatformVersion.LATEST,
+
+      command: [
+        'render',
+        '-m',
+        'CPU',
+        '-i',
+        `s3://${bucket.bucketName}/input/examples/blender_example.blend`,
+        '-o',
+        `s3://${bucket.bucketName}/output/`,
+        '-f',
+        '1',
+        '-t',
+        '1',
+      ],
     });
   }
 
