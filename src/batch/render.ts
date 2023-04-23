@@ -1,11 +1,18 @@
-import { EcsFargateContainerDefinition, FargateComputeEnvironment, JobQueue } from '@aws-cdk/aws-batch-alpha';
+import {
+  EcsEc2ContainerDefinition,
+  EcsFargateContainerDefinition,
+  EcsJobDefinition,
+  FargateComputeEnvironment,
+  JobQueue,
+  ManagedEc2EcsComputeEnvironment,
+} from '@aws-cdk/aws-batch-alpha';
 
 import { Construct } from 'constructs';
 
-import { Size } from 'aws-cdk-lib';
+import { Duration, Size } from 'aws-cdk-lib';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 import { Platform } from 'aws-cdk-lib/aws-ecr-assets';
-import { ContainerImage, FargatePlatformVersion } from 'aws-cdk-lib/aws-ecs';
+import { ContainerImage } from 'aws-cdk-lib/aws-ecs';
 import { ManagedPolicy, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { Bucket } from 'aws-cdk-lib/aws-s3';
 import { BucketDeployment, Source } from 'aws-cdk-lib/aws-s3-deployment';
@@ -44,6 +51,9 @@ export interface RenderProps {
   readonly loadExample?: boolean;
 }
 
+/**
+ * @link https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html
+ */
 export class Render extends Construct {
   constructor(scope: Construct, id: string, props: RenderProps) {
     super(scope, id);
@@ -58,75 +68,46 @@ export class Render extends Construct {
 
     this.loadExamples(loadExample, props.bucket);
 
-    // const minvCpus = 1;
+    // const minvCpus = 2;
     // const desiredvCpus = 2;
     const maxvCpus = 4;
 
     // Role for ECS job running on EC2 instance
-    // const spotComputeRole = new Role(this, 'SpotComputeRole', {
-    //   assumedBy: new ServicePrincipal('ec2.amazonaws.com'),
-    //   managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonEC2ContainerServiceforEC2Role')],
-    // });
+    const ec2Role = new Role(this, 'Ec2Role', {
+      assumedBy: new ServicePrincipal('ec2.amazonaws.com'),
+      managedPolicies: [ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonEC2ContainerServiceforEC2Role')],
+    });
 
-    // props.bucket.grantReadWrite(spotComputeRole);
+    props.bucket.grantReadWrite(ec2Role);
 
-    // const spotComputeRoleInstanceRole = new CfnInstanceProfile(this, 'SpotComputeRoleInstanceRole', {
-    //   roles: [spotComputeRole.roleName],
-    // });
-
-    // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#compute-environment
-    // const spotCompute = new ComputeEnvironment(this, 'SpotCompute', {
-    //   computeResources: {
-    //     vpc: props.vpc,
-    //     type: ComputeResourceType.SPOT,
-    //     allocationStrategy: AllocationStrategy.SPOT_CAPACITY_OPTIMIZED,
-
-    //     instanceRole: spotComputeRoleInstanceRole.attrArn,
-
-    //     minvCpus,
-    //     desiredvCpus,
-    //     maxvCpus,
-    //   },
-    //   enabled: true,
-    //   managed: true,
-    // });
-
-    // const onDemandCompute = new ComputeEnvironment(this, 'OnDemandCompute', {
-    //   computeResources: {
-    //     vpc: props.vpc,
-    //     type: ComputeResourceType.ON_DEMAND,
-    //     allocationStrategy: AllocationStrategy.BEST_FIT_PROGRESSIVE,
-
-    //     minvCpus,
-    //     desiredvCpus,
-    //     maxvCpus,
-    //   },
-    //   enabled: true,
-    //   managed: true,
-    // });
-
-    const fargateSpotCompute = new FargateComputeEnvironment(this, 'SpotFargateCompute', {
+    const fargateComputeSpot = new FargateComputeEnvironment(this, 'FargateComputeSpot', {
       vpc: props.vpc,
       spot: true,
       maxvCpus,
-      enabled: true,
     });
 
-    const computeEnvironments = [
-      // spotCompute,
-      // onDemandCompute,
-      fargateSpotCompute,
-    ];
+    const ec2ComputeSpot = new ManagedEc2EcsComputeEnvironment(this, 'Ec2ComputeSpot', {
+      vpc: props.vpc,
+      spot: true,
+      maxvCpus,
 
-    // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#job-queue
-    new JobQueue(this, JobQueue.name, {
-      computeEnvironments: computeEnvironments.map((el, index) => ({ computeEnvironment: el, order: index + 1 })),
+      instanceRole: ec2Role,
+    });
+
+    new JobQueue(this, 'FargateQueue', {
+      computeEnvironments: [{ order: 1, computeEnvironment: fargateComputeSpot }],
       enabled: true,
       priority: 10,
     });
 
+    new JobQueue(this, 'EC2Queue', {
+      computeEnvironments: [{ order: 2, computeEnvironment: ec2ComputeSpot }],
+      enabled: true,
+      priority: 20,
+    });
+
     this.createCPUJobDefinition(props.bucket);
-    // this.createCUDAJobDefinition(fargateExecutionRole);
+    this.createCUDAJobDefinition();
   }
 
   /**
@@ -159,7 +140,6 @@ export class Render extends Construct {
 
   /**
    * Create Job Definition for CPU workloads
-   * @link https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#job-definition
    */
   private createCPUJobDefinition(bucket: Bucket) {
     // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html
@@ -175,78 +155,71 @@ export class Render extends Construct {
 
     bucket.grantReadWrite(taskRole);
 
-    const jobMemory = 4096;
+    new EcsJobDefinition(this, 'CPUJobDefinition', {
+      container: new EcsFargateContainerDefinition(this, 'EcsFargateContainerDefinition', {
+        image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, {
+          file: 'cpu.Dockerfile',
+          platform: Platform.LINUX_AMD64,
+        }),
 
-    new EcsFargateContainerDefinition(this, 'FargateCPUJobDefinition', {
-      cpu: 2,
-      image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, {
-        file: 'cpu.Dockerfile',
-        platform: Platform.LINUX_AMD64,
+        cpu: 2,
+        memory: Size.gibibytes(4),
+
+        assignPublicIp: true, // Required in a default VPC to download Docker image from Amazon ECR
+        executionRole,
+        jobRole: taskRole,
+
+        command: [
+          'render',
+          '-m',
+          'CPU',
+          '-i',
+          `s3://${bucket.bucketName}/input/examples/blender_example.blend`,
+          '-o',
+          `s3://${bucket.bucketName}/output/`,
+          '-f',
+          '1',
+          '-t',
+          '1',
+        ],
       }),
-      memory: Size.mebibytes(jobMemory),
-
-      assignPublicIp: true, // Required in a default VPC to download Docker image from Amazon ECR
-      executionRole,
-      jobRole: taskRole,
-
-      fargatePlatformVersion: FargatePlatformVersion.LATEST,
-
-      command: [
-        'render',
-        '-m',
-        'CPU',
-        '-i',
-        `s3://${bucket.bucketName}/input/examples/blender_example.blend`,
-        '-o',
-        `s3://${bucket.bucketName}/output/`,
-        '-f',
-        '1',
-        '-t',
-        '1',
-      ],
+      timeout: Duration.minutes(10),
+      propagateTags: true,
     });
   }
 
   /**
    * Create Job Definition for Nvidia CUDA workloads
-   * @link https://docs.aws.amazon.com/cdk/api/v2/docs/aws-batch-alpha-readme.html#job-definition
    */
-  //   private createCUDAJobDefinition(executionRole: IRole) {
-  //     const jobMemory = 4096;
+  private createCUDAJobDefinition() {
+    new EcsJobDefinition(this, 'CUDAJobDefinition', {
+      container: new EcsEc2ContainerDefinition(this, EcsEc2ContainerDefinition.name, {
+        image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, {
+          file: 'gpu.Dockerfile',
+          platform: Platform.LINUX_AMD64,
+        }),
 
-  //     new JobDefinition(this, 'CUDAJobDefinition', {
-  //       container: {
-  //         image: ContainerImage.fromAsset(`${__dirname}/../../resources/docker`, {
-  //           file: 'gpu.Dockerfile',
-  //           platform: Platform.LINUX_AMD64,
-  //         }),
-  //         platformVersion: FargatePlatformVersion.LATEST,
-  //         executionRole,
+        cpu: 2,
+        gpu: 1,
+        memory: Size.gibibytes(4),
 
-  //         vcpus: 2,
-  //         gpuCount: 1,
+        command: [
+          'render',
+          '-m',
+          'CUDA',
+          '-i',
+          's3://test-cdk-blender-render-bucket/input/examples/blender_example.blend',
+          '-o',
+          's3://test-cdk-blender-render-bucket/output/',
+          '-f',
+          '1',
+          '-t',
+          '1',
+        ],
+      }),
 
-  //         memoryLimitMiB: jobMemory,
-
-  //         command: [
-  //           'render',
-  //           '-m',
-  //           'CUDA',
-  //           '-i',
-  //           's3://test-cdk-blender-render-bucket/input/examples/blender_example.blend',
-  //           '-o',
-  //           's3://test-cdk-blender-render-bucket/output/',
-  //           '-f',
-  //           '1',
-  //           '-t',
-  //           '1',
-  //         ],
-
-  //         assignPublicIp: false,
-  //       },
-  //       timeout: Duration.minutes(10),
-  //       platformCapabilities: [PlatformCapabilities.FARGATE],
-  //       propagateTags: true,
-  //     });
-  //   }
+      timeout: Duration.minutes(10),
+      propagateTags: true,
+    });
+  }
 }
